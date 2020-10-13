@@ -24,7 +24,7 @@ class ThorDataset(Dataset):
         def __getitem__(self, idx):
             return self.parent._load_file(self.target[idx])
 
-    def __init__(self, base, downsample_pointclouds=None, split_amt=0.05,
+    def __init__(self, base, downsample_pointclouds=None, split_amt=0.1,
                  max_time=None, split_seed=1337, cache=True,
                  output_type='tensor'):
         super().__init__()

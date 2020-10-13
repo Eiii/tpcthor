@@ -116,9 +116,10 @@ def time_dist(time_encode, mask, obj_idxs, keys, points):
     idxs2 = obj_idxs.unsqueeze(1)
     time1 = keys.unsqueeze(2)
     time2 = points.unsqueeze(1)
+    before = (time2<time1)
     same_obj = (idxs1 == idxs2)
     mask_exp = mask.unsqueeze(2)*mask.unsqueeze(1)
-    valid = mask_exp * same_obj
+    valid = mask_exp * same_obj * before
     # Calculate square distance in time
     # Unused as long as neighbors==-1, but may be relevant later
     sqr_dist = (time2-time1).float()**2
