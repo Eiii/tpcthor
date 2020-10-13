@@ -1,5 +1,6 @@
 from ..common import pad_tensors
-from .data_gen import ThorFrame, convert_depth_mask
+from .data_gen import convert_depth_mask
+from .types import ThorFrame
 
 import pickle
 import random

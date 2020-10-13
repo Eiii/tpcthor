@@ -8,9 +8,7 @@ import numpy as np
 from pathlib import Path
 from argparse import ArgumentParser
 
-from collections import namedtuple
 
-ThorFrame = namedtuple('ThorFrame', ('obj_data', 'struct_obj_data', 'obj_mask', 'depth_mask', 'camera'))
 def convert_output(o, i):
     objs = o.object_list
     structs = o.structural_object_list
