@@ -72,7 +72,7 @@ class Trainer:
     def train(self, epoch_limit):
         # Set up loaders for training&valid data
         loader_args = {'shuffle': True, 'batch_size': self.batch_size,
-                       'drop_last': True, 'num_workers': self.num_workers,
+                       'drop_last': False, 'num_workers': self.num_workers,
                        'pin_memory': True,
                        'collate_fn': self.problem.collate_fn}
         loader = DataLoader(self.problem.train_dataset, **loader_args)

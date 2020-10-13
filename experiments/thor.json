@@ -16,8 +16,7 @@
         "batch_size": 1,
         "lr": 0.001,
         "report_every": 0.01,
-        "valid_every": 0.5,
-        "disable_valid": true
+        "valid_every": 0.5
       },
       "repeat": 1
     }
