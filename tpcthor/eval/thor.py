@@ -62,7 +62,7 @@ def pred_margin(net, item, margin, start=0, step=1, max_time=None):
     return pred, all_objs
 
 def main(data, net_path, device):
-    ds = ThorDataset(data, downsample_pointclouds=8192, max_time=10).test
+    ds = ThorDataset(data, max_time=10).test
     print(len(ds))
     for idx in range(len(ds)):
         print(idx)
@@ -71,7 +71,7 @@ def main(data, net_path, device):
         net = common.load_result(net_path)
         net = common.make_net(net).eval().to(device)
         with torch.no_grad():
-            pred_pos, pred_idxs = pred_margin(net, item, 0, max_time=25)
+            pred_pos, pred_idxs = pred_margin(net, item, 1, max_time=20)
         fig = show_pred(item, pred_pos.cpu(), pred_idxs.cpu())
         plt.tight_layout()
         fig.savefig(f'{idx}.png')
