@@ -16,8 +16,8 @@ class ThorTest(Network):
             self.time_encode = DirectEncoding()
         elif time_encode == 'period':
             self.time_encode = PeriodEncoding(10, 30)
-        latent_sizes = [2**6]*3
-        pred_sz = 2**7
+        latent_sizes = [2**8]*3
+        pred_sz = 2**8
         self.space_dim = 3
         self.train_margins = [0, 1, 3, 7]
         self.make_encoder(latent_sizes)
@@ -26,12 +26,12 @@ class ThorTest(Network):
     def make_encoder(self, latent_sizes):
         self.time_convs = nn.ModuleList()
         self.combine_mlps = nn.ModuleList()
-        weight_hidden = [2**6]*2
-        c_mid = 2**5
-        final_hidden = [2**7]*2
+        weight_hidden = [2**6]*3
+        c_mid = 2**6
+        final_hidden = [2**7]*3
         default_args = {'weight_hidden': weight_hidden, 'c_mid': c_mid,
                         'final_hidden': final_hidden}
-        combine_hidden = [2**7]*3
+        combine_hidden = [2**8]*3
         in_size = self.space_dim
         for latent_sz in latent_sizes:
             args = dict(default_args)
@@ -47,10 +47,10 @@ class ThorTest(Network):
             in_size = latent_sz
 
     def make_decoder(self, latent_sz, pred_sz):
-        weight_hidden = [2**6]*2
-        c_mid = 2**5
-        final_hidden = [2**7]*2
-        pred_hidden = [2**7]*3
+        weight_hidden = [2**6]*3
+        c_mid = 2**6
+        final_hidden = [2**7]*3
+        pred_hidden = [2**8]*3
         args = {'weight_hidden': weight_hidden, 'c_mid': c_mid,
                 'final_hidden': final_hidden, 'neighbors': -1,
                 'c_in': latent_sz, 'c_out': pred_sz,
