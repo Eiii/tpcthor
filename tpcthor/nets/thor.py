@@ -18,6 +18,7 @@ class ThorTest(Network):
             self.time_encode = PeriodEncoding(10, 30)
         latent_sizes = [2**8]*3
         pred_sz = 2**8
+        self.max_obs_dropout = 0.5
         self.space_dim = 3
         self.train_margins = [0, 1, 3, 7]
         self.make_encoder(latent_sizes)
@@ -61,8 +62,8 @@ class ThorTest(Network):
                     'deepsets': True}
         self.predict_mlp = pointnet.SetTransform(**mlp_args)
 
-    def encode(self, mask, obj_idxs, times, pos):
-        time_dist_fn = partial(time_dist, self.time_encode, mask, obj_idxs)
+    def encode(self, mask, obj_idxs, times, pos, dropout_mask):
+        time_dist_fn = partial(time_dist, self.time_encode, mask, obj_idxs, dropout_mask)
         feats = pos
         for time_pc, combine_mlp in zip(self.time_convs, self.combine_mlps):
             time_nei = time_pc(times, times, feats, time_dist_fn)
@@ -91,7 +92,10 @@ class ThorTest(Network):
     def forward(self, mask, obj_idxs, times, pos,
                 target_mask, target_idxs, target_times,
                 margin_list=None):
-        encoded_feats = self.encode(mask, obj_idxs, times, pos)
+        obs_dropout = torch.rand(1)*self.max_obs_dropout
+        ps = obs_dropout.expand(*obj_idxs.size())
+        dropout_mask = torch.bernoulli(ps).bool().to(obj_idxs.device)
+        encoded_feats = self.encode(mask, obj_idxs, times, pos, dropout_mask)
         pred = self.decode(mask, encoded_feats, obj_idxs, times,
                            target_mask, target_idxs, target_times, margin_list)
         return pred
@@ -107,11 +111,12 @@ class ThorTest(Network):
         return (mask, obj_idxs, times, pos,
                 target_mask, target_idxs, target_times)
 
-def time_dist(time_encode, mask, obj_idxs, keys, points):
+def time_dist(time_encode, mask, obj_idxs, dropout_mask, keys, points):
     # Determine validity -
     # Only where both are valid according to the mask
     #  and both are the same object
     #  and point.time < key.time
+    dmask_exp = dropout_mask.unsqueeze(1) + dropout_mask.unsqueeze(2)
     idxs1 = obj_idxs.unsqueeze(2)
     idxs2 = obj_idxs.unsqueeze(1)
     time1 = keys.unsqueeze(2)
@@ -119,7 +124,7 @@ def time_dist(time_encode, mask, obj_idxs, keys, points):
     before = (time2<time1)
     same_obj = (idxs1 == idxs2)
     mask_exp = mask.unsqueeze(2)*mask.unsqueeze(1)
-    valid = mask_exp * same_obj * before
+    valid = mask_exp * same_obj * before * dmask_exp.logical_not()
     # Calculate square distance in time
     # Unused as long as neighbors==-1, but may be relevant later
     sqr_dist = (time2-time1).float()**2
