@@ -1,4 +1,3 @@
-from ..data.loader import ModelnetDataset
 import pickle
 from pathlib import Path
 import torch
@@ -45,14 +44,3 @@ def filter_name(results, name):
     if not name:
         return results
     return [r for r in results if name in m['measure'].name]
-
-
-def get_dataset_classes(path10, path40=None):
-    ds = ModelnetDataset(path10, type='test')
-    classes10 = list(ds.classes)
-    if path40 is not None:
-        ds = ModelnetDataset(path40, type='test')
-        classes40 = [x for x in ds.classes if x not in classes10]
-        return classes10, classes40
-    else:
-        return classes10
