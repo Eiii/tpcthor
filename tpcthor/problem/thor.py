@@ -8,8 +8,8 @@ import torch.nn.functional as F
 class Thor(Problem):
     def __init__(self, data_path, downsample=None):
         self.base_dataset = ThorDataset(data_path, downsample_pointclouds=downsample)
-        self.train_dataset = self.base_dataset.train
-        self.valid_dataset = self.base_dataset.test
+        self.train_dataset = self.base_dataset
+        self.valid_dataset = None
         self.collate_fn = collate
 
     def loss(self, item, pred):

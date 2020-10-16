@@ -18,37 +18,25 @@ class ThorDataset(Dataset):
             self.parent = parent
             self.target = target
 
-        def __len__(self):
-            return len(self.target)
-
-        def __getitem__(self, idx):
-            return self.parent._load_file(self.target[idx])
 
     def __init__(self, base, downsample_pointclouds=None, split_amt=0.1,
                  max_time=None, split_seed=1337, cache=True,
                  output_type='tensor'):
         super().__init__()
-        base = Path(base)
-        self._find_files(base)
-        self._split_files(split_amt, split_seed)
         self.downsample_pointclouds = downsample_pointclouds
-        self.train = self._SplitView(self, self.train_files)
-        self.test = self._SplitView(self, self.test_files)
         self.max_time = max_time
-        self.cache = dict() if cache else None
         assert output_type in ('tensor', 'raw')
         self.output_type = output_type
+        self.cache = dict() if cache else None
+        self._find_files(Path(base))
+        self._calc_entries()
 
     def _find_files(self, base):
         packs = base.glob('*.pkl.xz')
         self.files = list(packs)
 
-    def _split_files(self, pct, seed):
-        all_files = list(self.files)
-        random.seed(seed)
-        random.shuffle(all_files)
-        test_count = int(len(all_files)*pct)
-        self.test_files, self.train_files = all_files[:test_count], all_files[test_count:]
+    def _calc_entries(self):
+        pass
 
     def _load_file(self, path):
         if self.cache and path in self.cache:
@@ -93,6 +81,12 @@ class ThorDataset(Dataset):
         small_pts, small_idxs = zip(*result)
         return small_pts, small_idxs
 
+    def __len__(self):
+        return len(self.target)
+
+    def __getitem__(self, idx):
+        return self._load_file(self.target[idx])
+
     @staticmethod
     def _calc_obj_dicts(frames, id_dict):
         def calc_obj_dict(frame, id_dict):
@@ -132,13 +126,6 @@ class ThorDataset(Dataset):
         _dl = frames[first_valid:]
         if last_valid != 0: _dl = _dl[:-last_valid]
         return _dl
-
-    def __len__(self):
-        return len(self.files)
-
-    def __getitem__(self, idx):
-        return self._load_file(self.files[idx])
-
 
 def to_tensor_dict(scene):
     num_frames = len(scene['objs'])
