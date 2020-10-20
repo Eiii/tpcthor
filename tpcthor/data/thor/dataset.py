@@ -207,10 +207,13 @@ def collate(scenes):
             }
 
 def main(data):
+    from torch.utils.data import DataLoader
     ds = ThorDataset(data, downsample_pointclouds=2**13)
-    l = [x for x in itertools.islice(ds, 5)]
-    batch = collate(l)
-    import pdb; pdb.set_trace()  # XXX BREAKPOINT
+    loader = DataLoader(ds, num_workers=8, batch_size=16, collate_fn=collate)
+    for idx, item in enumerate(loader):
+        print(idx)
+        if idx > 12:
+            break
 
 def delete_bad(data):
     ds = ThorDataset(data)
