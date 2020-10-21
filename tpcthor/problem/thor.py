@@ -6,10 +6,9 @@ import torch.nn.functional as F
 
 
 class Thor(Problem):
-    def __init__(self, data_path, downsample=None):
-        self.base_dataset = ThorDataset(data_path, downsample_pointclouds=downsample)
-        self.train_dataset = self.base_dataset
-        self.valid_dataset = None
+    def __init__(self, data_path, valid_path, downsample=None):
+        self.train_dataset = ThorDataset(data_path, downsample_pointclouds=downsample)
+        self.valid_dataset = ThorDataset(valid_path, downsample_pointclouds=downsample)
         self.collate_fn = collate
 
     def loss(self, item, pred):

@@ -19,13 +19,11 @@ class ThorDataset(IterableDataset):
     def __init__(self,
                  base,
                  downsample_pointclouds=None,
-                 split_seed=1337,
-                 output_type='tensor'):
+                 split_seed=1337):
         super().__init__()
         self.downsample_pointclouds = downsample_pointclouds
-        assert output_type in ('tensor', 'raw')
-        self.output_type = output_type
-        self._find_all_files(Path(base))
+        packs = Path(base).glob('*.pkl.xz')
+        self.files = sorted(list(packs))
 
     def __iter__(self):
         worker_info = torch.utils.data.get_worker_info()
@@ -38,8 +36,8 @@ class ThorDataset(IterableDataset):
         return self._iter_from_files(worker_files)
 
     def _iter_from_files(self, files):
-        init_load = 3
-        reload_at = 16
+        init_load = 2
+        reload_at = 30
         files_iter = iter(files)
         entries = []
         for _ in range(init_load):
@@ -132,10 +130,6 @@ class ThorDataset(IterableDataset):
             frame_list = pickle.load(fd)
         return frame_list
 
-    def _find_all_files(self, base):
-        packs = base.glob('*.pkl.xz')
-        self.files = sorted(list(packs))
-
     @staticmethod
     def _calc_obj_dicts(frames, id_dict):
         def calc_obj_dict(frame, id_dict):
@@ -177,9 +171,9 @@ class ThorDataset(IterableDataset):
         return _dl
 
 def collate(scenes):
-    batch_size = len(scenes)
     keys = ('obj_ts', 'obj_ids', 'obj_data', 'pts_ts', 'pts', 'pts_ids', 'tgt_ts', 'tgt_ids', 'tgt_data')
-    obj_ts, obj_ids, obj_data, pts_ts, pts, pts_ids, tgt_ts, tgt_ids, tgt_data = [[s[key] for s in scenes] for key in keys]
+    obj_ts, obj_ids, obj_data, pts_ts, pts, pts_ids, tgt_ts, tgt_ids, tgt_data = \
+        [[s[key] for s in scenes] for key in keys]
     obj_masks = [torch.ones_like(i, dtype=torch.bool) for i in obj_ids]
     pad_obj_ts = pad_tensors(obj_ts, dims=[0])
     pad_obj_ids = pad_tensors(obj_ids, dims=[0], value=-1)

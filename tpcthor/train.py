@@ -15,8 +15,8 @@ from uuid import uuid4
 
 class Trainer:
     """Defines and tracks the state of a training run"""
-    def __init__(self, name, net, problem, out_path, report_every=0.1,
-                 valid_every=1, optim='adam', sched='cos',
+    def __init__(self, name, net, problem, out_path, report_every=1,
+                 valid_every=1, optim='adam', sched='none',
                  batch_size=4, lr=1e-3, min_lr=0, weight_decay=1e-4,
                  momentum=0.95, period=100, num_workers=0,
                  disable_valid=False):
@@ -71,44 +71,42 @@ class Trainer:
 
     def train(self, epoch_limit):
         # Set up loaders for training&valid data
-        loader_args = {'shuffle': True, 'batch_size': self.batch_size,
-                       'drop_last': False, 'num_workers': self.num_workers,
-                       'pin_memory': True,
+        loader_args = {'batch_size': self.batch_size, 'drop_last': False,
+                       'num_workers': self.num_workers, 'pin_memory': True,
                        'collate_fn': self.problem.collate_fn}
         loader = DataLoader(self.problem.train_dataset, **loader_args)
         valid_loader = DataLoader(self.problem.valid_dataset, **loader_args)
-        # Useful values to use during training
-        num_batches = len(loader)
-        batches_elapsed = 0
-        running_loss = 0
+        # Useful values for training
         next_train_report = self.report_every
         next_valid = self.valid_every
+        total_batches = 0
+        running_batches = 0
+        running_loss = 0
+        epoch = 0
         # Training loop
         self.start_time = time()
         self.net = self.net.cuda()
-        end_training = False
-        epoch = 0
         # Eval on validation, record results
-        self.validation_report(valid_loader, epoch)
+        self.validation_report(valid_loader, total_batches)
+        end_training = False
         while not end_training:
             # Train on batch
             for i, data in enumerate(loader):
-                torch.cuda.empty_cache()
+                epoch_batches = 0
                 # Check reporting & termination conditions
-                batch_time = epoch + i/num_batches
-                if batch_time > epoch_limit:
+                if epoch > epoch_limit:
                     end_training = True
                     break
-                if batch_time > next_train_report:
-                    avg_loss = running_loss / batches_elapsed
+                if total_batches > next_train_report:
+                    avg_loss = running_loss / running_batches
                     wall_time = self.runtime()
-                    lr = self.optim.param_groups[0]['lr']
-                    self.measure.training_loss(batch_time, wall_time, avg_loss, lr)
+                    lr = self.optim.param_groups[0]['lr'] # Kind of a hack
+                    self.measure.training_loss(total_batches, wall_time, avg_loss, lr)
                     running_loss = 0
-                    batches_elapsed = 0
+                    running_batches = 0
                     next_train_report += self.report_every
-                if batch_time > next_valid:
-                    self.validation_report(valid_loader, batch_time)
+                if total_batches > next_valid:
+                    self.validation_report(valid_loader, total_batches)
                     next_valid += self.valid_every
                 # Train on batch
                 self.optim.zero_grad()
@@ -117,31 +115,30 @@ class Trainer:
                 pred = self.net.forward(*self.net.get_args(data))
                 # Calculate problem loss and (optionally) net loss
                 loss = self.problem.loss(data, pred)
-                if hasattr(self.net, 'loss'):
-                    net_loss = self.net.loss(data, pred)
-                    loss += net_loss
                 # Optimization step
                 loss.backward()
                 self.optim.step()
                 # Batch-wise schedule update
-                self.batch_sched_step(batch_time)
+                self.batch_sched_step(total_batches)
                 # UI reporting
                 running_loss += loss.item()
-                batches_elapsed += 1
+                running_batches += 1
+                epoch_batches += 1
+                total_batches += 1
             else:
+                print(f'EPOCH: {epoch},{epoch_batches}')
                 epoch += 1
-                batch_time = epoch
             # Epoch-wise schedule update
             self.epoch_sched_step()
         # Final validation
-        self.validation_report(valid_loader, batch_time)
+        self.validation_report(valid_loader, total_batches)
 
-    def validation_report(self, ds, epoch):
+    def validation_report(self, ds, batches):
         if self.problem.valid_dataset is not None and not self.disable_valid:
             valid_loss = self.validation_loss(ds)
             wall_time = self.runtime()
-            self.measure.valid_stats(epoch, wall_time, valid_loss)
-        self.dump_results(epoch)
+            self.measure.valid_stats(batches, wall_time, valid_loss)
+        self.dump_results(batches)
 
     def validation_loss(self, loader):
         self.net.eval()
@@ -164,7 +161,7 @@ class Trainer:
                 'net_type': type(self.net).__name__,
                 'net_args': self.net.args,
                 'state_dict': state_dict,
-                'batch_time': time}
+                'total_batches': time}
         with o.open('wb') as fd:
             pickle.dump(data, fd)
         self.net.cuda()

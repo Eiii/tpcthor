@@ -3,6 +3,7 @@
   "problem_type": "Thor",
   "problem_args": {
     "data_path": "./data/thor/scenes",
+    "valid_path": "./data/thor/scenes/test",
     "downsample": 1024
   },
   "epochs": 1,
@@ -15,8 +16,9 @@
       "train_args": {
         "batch_size": 1,
         "lr": 0.001,
-        "report_every": 0.01,
-        "valid_every": 0.5
+        "report_every": 1,
+        "valid_every": 100,
+        "disable_valid": true
       },
       "repeat": 1
     }
